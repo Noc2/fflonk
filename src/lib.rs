@@ -11,6 +11,10 @@ mod pcs;
 
 type Poly<F> = DensePolynomial<F>; // currently SparsePolynomial doesn't implement UVPolynomial anyway
 
+// (C, x, z) represents a claim that the polynomial p committed to C under the given commitment scheme
+// evaluates to z at x: CS::commit(p) = C and p(x) = z.
+struct EvaluationClaim<F: PrimeField, P, CS: CommitmentScheme<F, P>> (CS::G, F, F);
+
 pub fn open<F, C, T>(
     fss: &[Vec<Poly<F>>], // vecs of polynomials to combine
     ts: &[usize], // lengths of each combination

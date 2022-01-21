@@ -6,6 +6,8 @@ use ark_poly::univariate::{DensePolynomial, DenseOrSparsePolynomial};
 use std::collections::HashSet;
 
 use crate::pcs::{AdditiveCommitment, CommitmentScheme};
+use crate::EvaluationClaim;
+use std::collections::HashMap;
 
 
 pub trait ShplonkTranscript<F, G> {
@@ -133,6 +135,27 @@ fn get_linearization_commitment<F, C, T>(
     let r = rs_at_zeta.zip(gzs).map(|(ri_at_zeta, gzi)| ri_at_zeta * &gzi).sum::<F>() * z_at_zeta;
 
     fc - scheme.commit_const(&r) - qc.mul(z_at_zeta)
+}
+
+pub fn aggregate_claims<F, P, C, T>(
+    evals: Vec<EvaluationClaim<F, DensePolynomial<F>, C>>,
+    qc: C::G, // commitment to the aggregation polynomial
+    scheme: &C,
+    transcript: &mut T,
+) -> EvaluationClaim<F, DensePolynomial<F>, C>
+    where
+        F: PrimeField,
+        C: CommitmentScheme<F, DensePolynomial<F>>,
+        T: ShplonkTranscript<F, C::G>,
+{
+    let mut map: HashMap<C::G, Vec<(F, F)>> = HashMap::new();
+    for EvaluationClaim(c, x, z) in evals.into_iter() {
+        map.entry(c).or_insert(Vec::new()).push((x, z));
+    }
+    let (fcs, xzs): (Vec<C::G>, Vec<(Vec<F>, Vec<F>)>) = map.into_iter().map(|(c, xzs)| (c, xzs.into_iter().unzip())).unzip();
+    let (xss, yss) = xzs.into_iter().unzip();
+    let lc = get_linearization_commitment(&fcs, &qc, &xss, &yss, scheme, transcript);
+    EvaluationClaim(lc, transcript.get_zeta(), F::zero())
 }
 
 pub fn verify<F, C, T>(

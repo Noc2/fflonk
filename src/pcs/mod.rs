@@ -1,9 +1,12 @@
 use ark_ff::PrimeField;
 use ark_std::ops::{Add, Sub};
 use ark_std::iter::Sum;
+use std::hash::Hash;
 
 pub trait AdditiveCommitment<F: PrimeField>:
 Sized
++ Eq
++ Hash
 + Clone
 + Add<Self, Output=Self>
 + Sub<Self, Output=Self>
